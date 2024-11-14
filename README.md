@@ -13,3 +13,5 @@ The program uses:
   Classes
 
 To use the canvas API you must first create a canvas element within the HTML then access it in JavaScript  where you can manipulate  what is drawn and how  behaves. 
+
+There are instructions in the program that explain how to maneuver through the simulation space 
