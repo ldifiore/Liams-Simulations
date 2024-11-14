@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <link rel="stylesheet" href="/styles/styleSheet.css">
+        <meta charset="UTF-8">
+        <title>simulations.liam.difiore</title>
+        <meta name="description"content="">
+        <meta property="og:title" content="simulations.liam.difiore">
+        <meta property="og:description"content="">
+        <meta property="og:image" content="">
+    </head>
+    <body>
+        <div class="simSpace" id="simSpace">
+
+            <canvas id="canvas"></canvas>
+            
+        </div>
+
+        <div class="UI">
+
+            <div class="timeContainer">
+
+                <div class="timeData">
+                    
+                    <h3 id="realTimeElapsed">totTime: <br><Span id="dataTotTime"></Span>s</h3>
+                    <h3 id="simTimeElapsed">totSimTime: <br><Span id="dataTotSimTime"></Span>s</h3>
+                    <h3 id="timeScaleNum">TimeScale: <br><Span id="dataTimeScale"></Span></h3>
+
+                </div>
+
+                <div class="sliderContainer">
+
+
+
+                    <div class="sliderWithTicks" id="timeSliderWithTicks">
+
+                        <div class="ticks" id="leftTicks" style="writing-mode: vertical-lr; direction: ltr">
+
+                            <legend id="timeScaleTitle">TimeScale</legend>
+                            <legend class="tick">|</legend>
+                            <legend class="tick">|</legend>
+                            <legend class="tick">|</legend>
+                            <legend class="tick">|+e0</legend>
+                            <legend class="tick">|</legend>
+                            <legend class="tick">|</legend>
+                            <legend class="tick">|</legend>
+                            <legend class="tick">|-e3</legend>
+
+                        </div>
+
+                        <div class="slider">
+                            <input type=range class="timeSlider" id="timeScale" orient="vertical" style="writing-mode: vertical-lr; direction: rtl" defaultValue={0} oninput="timeSliderChange(this.value)">
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="sliderWithTicks" id="fpsSliderWithTicks">
+
+                        <div class="slider">
+                            <progress class="fpsSlider" id="fpsBar" value="20" max="180" orient="vertical" style="writing-mode: vertical-lr; direction: rtl"  ></progress>
+                        </div>
+
+                        <div class="ticks" id="rightTicks" style="writing-mode: vertical-lr; direction: ltr">
+
+                            <legend id="fpsScaleTitle">FPS</legend>
+                            <legend class="tick">| 160</legend>
+                            <legend class="tick">| 140</legend>
+                            <legend class="tick">| 120</legend>
+                            <legend class="tick">| 100</legend>
+                            <legend class="tick">| 80</legend>
+                            <legend class="tick">| 60</legend>
+                            <legend class="tick">| 40</legend>
+                            <legend class="tick">| 20</legend>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+            <div class="data">
+    
+                <header class="simSelector">
+
+                    <button class="dropdown">
+                        <h1>
+                            Particle Sim
+                        </h1>
+                    </button>
+
+                    <div class="dropdown-content">
+                        <a href=""><h2>Wave Particle Sim</h2></a>
+                        <a href=""><h2>Rope Sim</h2></a>
+                    </div>
+                        
+                </header>
+        
+                <div class="simData">
+
+                    <div class="buttonWrapper" onclick="pauseSim()">
+                        <label for="pause">PAUSE</label>
+                        <button class="simButton" id="pause">
+                        </button>
+                    </div>
+
+                    <div class="buttonWrapper" onclick="resetSim()">
+                        <label for="reset">RESET</label>
+                        <button class="simButton" id="reset">
+                        </button>
+                    </div>
+
+                    <div class="buttonWrapper" onclick="">
+                        <label for="repeat">REPEAT</label>
+                        <button class="simButton" id="repeat">
+                        </button>
+                    </div>
+
+                    <div class="userInfo">
+                        <p>-use the scroll wheel to zoom in and out</p>
+                        <br>
+                        <p>-press down on the scroll wheel and drag to move</p>
+                        <br>
+                        <p>-drag the time scale to adjust how fast time passes in the simulation</p>
+                        <br>
+                        <p>-repeat is currently broken</p>
+                        <br>
+                        <p>-other simulations are not linked yet</p>
+                    </div>
+                    
+                </div>
+    
+            </div>
+
+        </div>
+
+        <script>
+            const canvas = document.getElementById('canvas')
+            const c = canvas.getContext('2d')
+            var divHeight = document.getElementById('simSpace').clientHeight;
+            var divWidth = document.getElementById('simSpace').clientWidth;
+
+            var timeSlider = 0;
+
+            function timeSliderChange(value){
+                timeSlider = ((value/50)-1)*3;
+                //console.log(timeSlider);
+            }
+
+            canvas.width = divWidth;
+            canvas.height = divHeight-4;
+            
+            const pixelSize = 0.00020101509747341603;
+
+
+            const windowWidthMeter = .34 ;
+            const windowHeightMeter = .164 ;
+
+            const pixelWidth = windowWidthMeter/canvas.width;
+            const pixelHeight = windowHeightMeter/canvas.height;
+
+
+            const centX = canvas.width/2;
+            const centY = canvas.height/2;
+
+            const halfScreenX = windowWidthMeter/2;
+            const halfScreenY = windowHeightMeter/2;
+
+            console.log('centX: '+centX+'     centY: '+centY)
+
+            console.log('canvas.width: '+canvas.width+'px canvas.height: '+canvas.height+'px');
+
+            console.log('single pixel width: ' +pixelWidth+'   single pixel height:'+pixelHeight);
+
+            console.log('pixel size: '+pixelSize);
+            
+
+            let zoom = 1;
+            let mouseButtons = [0,0,0,0,0];
+            let mousePosition = [0,0];
+            let wheelPos = 0;
+            let deltaWheel = 0; 
+            let wheelDragStartPosition = [0,0];
+            let wheelDragDelta = [0,0];
+            let lastWheelDragDelta = [0,0];
+            let totalWheelDragDelta = [0,0];
+            const buttonNames = ["left", "wheel", "right", "back", "forward"];
+            let pause = false;
+            let reset = false;
+            let repeat = false;
+            let currentSim = [];
+
+        </script>
+
+        <script src = "Vector2.js"></script>
+        <script src = "DrawUtillsMeter.js"></script>
+        <script src = "particle.js"></script>
+        <script src = "main.js"></script>
+
+
+        <script>
+
+            function pauseSim(){
+                if(pause){
+                    pause = false
+                }else{
+                    pause = true;
+                }
+            }
+
+            function resetSim(){
+                Sim.InitSimulation();
+            }
+
+            function repeatSim(){
+                repeat = true;
+                Sim.InitSimulation();
+                repeat = false;
+            }
+
+            
+//  GET WHEEL POSITION
+            canvas.addEventListener("wheel" , function(evt){
+                event.preventDefault();
+                deltaWheel = event.deltaY/1000;
+                wheelPos += deltaWheel;
+                zoom = Math.pow(10,wheelPos);
+            })
+
+//  GET MOUSE BOTTONS
+    //  MOUSE BOTTON DOWN
+            canvas.addEventListener('mousedown',function(){
+
+                event.preventDefault();
+
+                mouseButtons[event.button] = 1;
+
+                if (event.button == 1){
+                    wheelDragStartPosition[0] = mousePosition[0];
+                    wheelDragStartPosition[1] = mousePosition[1];
+                }
+
+            });
+
+    //  MOUSE BOTTON UP
+            canvas.addEventListener('mouseup',function(){
+
+                event.preventDefault();
+
+                mouseButtons[event.button] = 0;
+
+                lastWheelDragDelta[0] += wheelDragDelta[0] 
+                lastWheelDragDelta[1] += wheelDragDelta[1] 
+
+
+            });
+
+//  GET MOUSE POSITION
+            canvas.addEventListener('mousemove',function(evt){
+                var rect = canvas.getBoundingClientRect();
+                mousePosition = [evt.clientX - rect.left,evt.clientY - rect.top + 1];
+                //console.log(mousePosition);
+
+                if (mouseButtons[1]){
+                    wheelDragDelta[0] = mousePosition[0] - wheelDragStartPosition[0];
+                    wheelDragDelta[1] = mousePosition[1] - wheelDragStartPosition[1];
+
+                    totalWheelDragDelta[0] = wheelDragDelta[0] + lastWheelDragDelta[0];
+                    totalWheelDragDelta[1] = wheelDragDelta[1] + lastWheelDragDelta[1];
+
+                };
+
+            });
+
+//  MAIN LOOP            
+            function MainLoop(){
+                Sim.Update();
+                window.requestAnimationFrame(MainLoop);
+            }
+
+            Sim.InitSimulation();
+
+            MainLoop();
+        </script>
+    </body>
+</html>
